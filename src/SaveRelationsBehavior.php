@@ -227,15 +227,7 @@ class SaveRelationsBehavior extends Behavior
     {
         $fks = [];
         if (is_array($data)) {
-            // Get the right link definition
-            if ($relation->via instanceof BaseActiveRecord) {
-                $link = $relation->via->link;
-            } elseif (is_array($relation->via)) {
-                list($viaName, $viaQuery) = $relation->via;
-                $link = $viaQuery->link;
-            } else {
-                $link = $relation->link;
-            }
+            $link = $this->_getLink($relation);
             // search PK
             foreach ($modelClass::primaryKey() as $modelAttribute) {
                 if (isset($data[$modelAttribute])) {
@@ -262,6 +254,25 @@ class SaveRelationsBehavior extends Behavior
             $fks = $data;
         }
         return $fks;
+    }
+
+    /**
+     * Get the right link definition
+     * @param $relation
+     * @return array
+     */
+    private function _getLink($relation)
+    {
+        if ($relation->via instanceof BaseActiveRecord) {
+            $link = $relation->via->link;
+        } elseif (is_array($relation->via)) {
+            list($viaName, $viaQuery) = $relation->via;
+            $link = $viaQuery->link;
+        } else {
+            $link = $relation->link;
+        }
+
+        return $link;
     }
 
     /**
