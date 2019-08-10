@@ -165,8 +165,11 @@ class SaveRelationsBehavior extends Behavior
         if (!($value instanceof $relation->modelClass)) {
             $value = $this->processModelAsArray($value, $relation, $relationName);
         }
-        $this->_newRelationValue[$relationName] = $value;
-        $owner->populateRelation($relationName, $value);
+
+        if ($this->_checkAccess($value, $relation)) {
+            $this->_newRelationValue[$relationName] = $value;
+            $owner->populateRelation($relationName, $value);
+        }
     }
 
     /**
@@ -191,14 +194,35 @@ class SaveRelationsBehavior extends Behavior
         }
         foreach ($value as $entry) {
             if ($entry instanceof $relation->modelClass) {
-                $newRelations[] = $entry;
+                $newEntry = $entry;
             } else {
                 // TODO handle this with one DB request to retrieve all models
-                $newRelations[] = $this->processModelAsArray($entry, $relation, $relationName);
+                $newEntry = $this->processModelAsArray($entry, $relation, $relationName);
+            }
+
+            if ($this->_checkAccess($newEntry, $relation)) {
+                $newRelations[] = $newEntry;
             }
         }
         $this->_newRelationValue[$relationName] = $newRelations;
         $owner->populateRelation($relationName, $newRelations);
+    }
+
+    /**
+     * Check access to a related model.
+     * @param $entry
+     * @param $relation
+     * @return bool
+     */
+    private function _checkAccess($entry, $relation)
+    {
+        $link = $this->_getLink($relation);
+        foreach ($link as $relatedAttribute => $relatedModelAttribute) {
+            if ($entry->{$relatedAttribute} !== $this->owner->{$relatedModelAttribute}) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
