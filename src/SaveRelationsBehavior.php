@@ -210,12 +210,16 @@ class SaveRelationsBehavior extends Behavior
 
     /**
      * Check access to a related model.
-     * @param $entry
+     * @param BaseActiveRecord $entry
      * @param $relation
      * @return bool
      */
     private function _checkAccess($entry, $relation)
     {
+        if ($entry->getIsNewRecord()) {
+            return true;
+        }
+
         $link = $this->_getLink($relation);
         foreach ($link as $relatedAttribute => $relatedModelAttribute) {
             if ($entry->{$relatedAttribute} !== $this->owner->{$relatedModelAttribute}) {
