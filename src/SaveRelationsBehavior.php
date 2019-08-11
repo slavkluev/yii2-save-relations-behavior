@@ -44,6 +44,7 @@ class SaveRelationsBehavior extends Behavior
     private $_relationsScenario = [];
     private $_relationsExtraColumns = [];
     private $_relationsCascadeDelete = [];
+    private $_relationsDynamicClass = [];
 
     /**
      * @inheritdoc
@@ -51,7 +52,7 @@ class SaveRelationsBehavior extends Behavior
     public function init()
     {
         parent::init();
-        $allowedProperties = ['scenario', 'extraColumns', 'cascadeDelete'];
+        $allowedProperties = ['scenario', 'extraColumns', 'cascadeDelete', 'dynamicClass'];
         foreach ($this->relations as $key => $value) {
             if (is_int($key)) {
                 $this->_relations[] = $value;
@@ -239,9 +240,30 @@ class SaveRelationsBehavior extends Behavior
     protected function processModelAsArray($data, $relation, $name)
     {
         /** @var BaseActiveRecord $modelClass */
-        $modelClass = $relation->modelClass;
+        $modelClass = $this->_getModelClass($data, $relation, $name);
         $fks = $this->_getRelatedFks($data, $relation, $modelClass);
         return $this->_loadOrCreateRelationModel($data, $fks, $modelClass, $name);
+    }
+
+    /**
+     * Get the related model class.
+     * @param $data
+     * @param $relation
+     * @param $relationName
+     * @return BaseActiveRecord
+     */
+    private function _getModelClass($data, $relation, $relationName)
+    {
+        if (isset($this->_relationsDynamicClass[$relationName])) {
+            $typeClassFiled = $this->_relationsDynamicClass[$relationName]['typeClassField'];
+            if (isset($data[$typeClassFiled])) {
+                $typeClass = $data[$typeClassFiled];
+                return $this->_relationsDynamicClass[$relationName]['classes'][$typeClass];
+            }
+        }
+
+        $modelClass = $relation->modelClass;
+        return $modelClass;
     }
 
     /**
