@@ -217,6 +217,10 @@ class SaveRelationsBehavior extends Behavior
      */
     private function _checkAccess($entry, $relation)
     {
+        if (is_null($entry)) {
+            return false;
+        }
+
         if ($entry->getIsNewRecord()) {
             return true;
         }
@@ -242,16 +246,9 @@ class SaveRelationsBehavior extends Behavior
         /** @var BaseActiveRecord $modelClass */
         $modelClass = $this->_getModelClass($data, $relation, $name);
         $fks = $this->_getRelatedFks($data, $relation, $modelClass);
-        return $this->_loadOrCreateRelationModel($data, $fks, $modelClass, $name);
+        return $this->_loadOrCreateRelationModel($data, $fks, $relation, $modelClass, $name);
     }
 
-    /**
-     * Get the related model class.
-     * @param $data
-     * @param $relation
-     * @param $relationName
-     * @return BaseActiveRecord
-     */
     private function _getModelClass($data, $relation, $relationName)
     {
         if (isset($this->_relationsDynamicClass[$relationName])) {
@@ -329,17 +326,22 @@ class SaveRelationsBehavior extends Behavior
      * Load existing model or create one if no key was provided and data is not empty
      * @param $data
      * @param $fks
+     * @param $relation
      * @param $modelClass
      * @param $relationName
      * @return BaseActiveRecord
      */
-    private function _loadOrCreateRelationModel($data, $fks, $modelClass, $relationName)
+    private function _loadOrCreateRelationModel($data, $fks, $relation, $modelClass, $relationName)
     {
 
         /** @var BaseActiveRecord $relationModel */
         $relationModel = null;
         if (!empty($fks)) {
-            $relationModel = $modelClass::findOne($fks);
+            $relationModel = $relation->modelClass::findOne($fks);
+
+            if ($relationModel instanceof BaseActiveRecord && !$relationModel instanceof $modelClass) {
+                $relationModel = $this->_changeModelClass($relationModel, $modelClass, $relation);
+            }
         }
         if (!($relationModel instanceof BaseActiveRecord) && !empty($data)) {
             $relationModel = new $modelClass;
@@ -356,6 +358,24 @@ class SaveRelationsBehavior extends Behavior
 
         }
         return $relationModel;
+    }
+
+    private function _changeModelClass($model, $modelClass, $relation)
+    {
+        $newModel = new $modelClass;
+        $link = $this->_getLink($relation);
+
+        $newAttributes = [];
+        foreach ($model::primaryKey() as $modelAttribute) {
+            $newAttributes[$modelAttribute] = $model->{$modelAttribute};
+        }
+        foreach ($link as $relatedAttribute => $relatedModelAttribute) {
+            $newAttributes[$relatedAttribute] = $model->{$relatedAttribute};
+        }
+        $newModel->setOldAttributes($newAttributes);
+        $newModel->setAttributes($newAttributes, false);
+
+        return $newModel;
     }
 
     /**
