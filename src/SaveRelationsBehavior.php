@@ -243,23 +243,37 @@ class SaveRelationsBehavior extends Behavior
      */
     protected function processModelAsArray($data, $relation, $name)
     {
-        /** @var BaseActiveRecord $modelClass */
         $modelClass = $this->_getModelClass($data, $relation, $name);
         $fks = $this->_getRelatedFks($data, $relation, $modelClass);
         return $this->_loadOrCreateRelationModel($data, $fks, $relation, $modelClass, $name);
     }
 
+    /**
+     * @param $data
+     * @param $relation
+     * @param $relationName
+     * @return BaseActiveRecord
+     */
     private function _getModelClass($data, $relation, $relationName)
     {
         if (isset($this->_relationsDynamicClass[$relationName])) {
             $typeClassFiled = $this->_relationsDynamicClass[$relationName]['typeClassField'];
             if (isset($data[$typeClassFiled])) {
                 $typeClass = $data[$typeClassFiled];
-                return $this->_relationsDynamicClass[$relationName]['classes'][$typeClass];
+                if (isset(
+                    $this->_relationsDynamicClass[$relationName]['classes'][$typeClass])
+                    && $this->_relationsDynamicClass[$relationName]['classes'][$typeClass] instanceof BaseActiveRecord
+                ) {
+                    return $this->_relationsDynamicClass[$relationName]['classes'][$typeClass];
+                } else {
+                    $model = new $relation->modelClass;
+                    $model->addError($typeClassFiled, "Class doesn't exist");
+                    return $model;
+                }
             }
         }
 
-        $modelClass = $relation->modelClass;
+        $modelClass = new $relation->modelClass;
         return $modelClass;
     }
 
@@ -327,7 +341,7 @@ class SaveRelationsBehavior extends Behavior
      * @param $data
      * @param $fks
      * @param $relation
-     * @param $modelClass
+     * @param BaseActiveRecord $modelClass
      * @param $relationName
      * @return BaseActiveRecord
      */
@@ -344,7 +358,7 @@ class SaveRelationsBehavior extends Behavior
             }
         }
         if (!($relationModel instanceof BaseActiveRecord) && !empty($data)) {
-            $relationModel = new $modelClass;
+            $relationModel = $modelClass;
         }
         // If a custom scenario is set, apply it here to correctly be able to set the model attributes
         if (array_key_exists($relationName, $this->_relationsScenario)) {
@@ -489,7 +503,7 @@ class SaveRelationsBehavior extends Behavior
         $model = $this->owner;
         if (!is_null($relationModel) && ($relationModel->isNewRecord || count($relationModel->getDirtyAttributes()))) {
             Yii::debug("Validating {$prettyRelationName} relation model using " . $relationModel->scenario . ' scenario', __METHOD__);
-            if (!$relationModel->validate()) {
+            if (!$relationModel->validate(null, false)) {
                 $this->_addError($relationModel, $model, $relationName, $prettyRelationName);
             }
 
