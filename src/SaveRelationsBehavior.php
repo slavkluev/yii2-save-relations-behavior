@@ -663,6 +663,8 @@ class SaveRelationsBehavior extends Behavior
                     $this->_addError($relationModel, $owner, $relationName, self::prettyRelationName($relationName));
                     throw new DbException('Related record ' . self::prettyRelationName($relationName) . ' could not be saved.');
                 }
+            } else {
+                $relationModel->trigger(BaseActiveRecord::EVENT_AFTER_UPDATE);
             }
         }
         $junctionTablePropertiesUsed = array_key_exists($relationName, $this->_relationsExtraColumns);
