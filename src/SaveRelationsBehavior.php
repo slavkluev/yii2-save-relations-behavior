@@ -202,7 +202,7 @@ class SaveRelationsBehavior extends Behavior
             }
 
             if ($this->_checkAccess($newEntry, $relation)) {
-                $newRelations[] = $newEntry;
+                $newRelations[] = clone $newEntry;
             }
         }
         $this->_newRelationValue[$relationName] = $newRelations;
