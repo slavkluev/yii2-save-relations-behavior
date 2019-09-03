@@ -202,7 +202,7 @@ class SaveRelationsBehavior extends Behavior
             }
 
             if ($this->_checkAccess($newEntry, $relation)) {
-                $newRelations[] = clone $newEntry;
+                $newRelations[] = $newEntry;
             }
         }
         $this->_newRelationValue[$relationName] = $newRelations;
@@ -358,7 +358,7 @@ class SaveRelationsBehavior extends Behavior
             }
         }
         if (!($relationModel instanceof BaseActiveRecord) && !empty($data)) {
-            $relationModel = $modelClass;
+            $relationModel = new $modelClass;
         }
         // If a custom scenario is set, apply it here to correctly be able to set the model attributes
         if (array_key_exists($relationName, $this->_relationsScenario)) {
